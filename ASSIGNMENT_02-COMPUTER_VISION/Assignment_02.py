@@ -3,51 +3,57 @@ import numpy as np
 import matplotlib.pyplot as plt
 from skimage.segmentation import watershed, felzenszwalb
 from skimage.color import rgb2gray
+from skimage.feature import hog
 import os
 
-# 1️⃣ Ensure output folder exists
+# Ensure output folder exists
 os.makedirs("Assignment_02", exist_ok=True)
 
-# 2️⃣ Load Image (replace filename with your actual image)
-img = cv2.imread('/workspaces/computer-vision-Assignments/Copilot_20260901_194737.png')   
-print("Image shape:", img.shape)
-
-# 3️⃣ Convert to Grayscale
+# Load Image (replace filename with your actual image)
+img = cv2.imread("Copilot_20260901_194737.png")
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-# 4️⃣ Canny Edge Detection
-canny_edges = cv2.Canny(gray, 100, 200)
-cv2.imwrite('Assignment_02/canny_output.png', canny_edges)
+# ------------------ Task 2: Edge + Corner Detection ------------------
+canny = cv2.Canny(gray, 100, 200)
+cv2.imwrite("Assignment_02/canny_output.png", canny)
 
-# 5️⃣ Harris Corner Detection
-gray_float = np.float32(gray)
-harris = cv2.cornerHarris(gray_float, 2, 3, 0.04)
-harris = cv2.dilate(harris, None)
-img_harris = img.copy()
-img_harris[harris > 0.01 * harris.max()] = [0, 0, 255]
-cv2.imwrite('Assignment_02/harris_output.png', img_harris)
+harris = cv2.cornerHarris(np.float32(gray), 2, 3, 0.04)
+harris_norm = cv2.normalize(harris, None, 0, 255, cv2.NORM_MINMAX)
+cv2.imwrite("Assignment_02/harris_output.png", harris_norm)
 
-# 6️⃣ Watershed Segmentation
-ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-kernel = np.ones((3,3), np.uint8)
-opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=2)
-sure_bg = cv2.dilate(opening, kernel, iterations=3)
-dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
-ret, sure_fg = cv2.threshold(dist_transform, 0.7*dist_transform.max(), 255, 0)
-sure_fg = np.uint8(sure_fg)
-unknown = cv2.subtract(sure_bg, sure_fg)
-ret, markers = cv2.connectedComponents(sure_fg)
-markers = markers+1
-markers[unknown==255] = 0
-img_ws = img.copy()
-markers = cv2.watershed(img_ws, markers)
-img_ws[markers == -1] = [255,0,0]
-cv2.imwrite('Assignment_02/watershed_output.png', img_ws)
+# ------------------ Task 3: Segmentation ------------------
+gray_float = rgb2gray(img)
+watershed_seg = watershed(gray_float)
+felzen_seg = felzenszwalb(gray_float, scale=100)
 
-# 7️⃣ Felzenszwalb Segmentation
-segments_fz = felzenszwalb(rgb2gray(img), scale=100)
-plt.imshow(segments_fz, cmap='nipy_spectral')
-plt.axis('off')
-plt.savefig('Assignment_02/felzenszwalb_output.png', bbox_inches='tight')
+plt.imsave("Assignment_02/watershed_output.png", watershed_seg, cmap="nipy_spectral")
+plt.imsave("Assignment_02/felzenszwalb_output.png", felzen_seg, cmap="nipy_spectral")
 
-print("✅ All outputs saved in Assignment_02 folder: canny_output.png, harris_output.png, watershed_output.png, felzenszwalb_output.png")
+# ------------------ Task 4: SIFT + HOG Descriptors ------------------
+# Convert to grayscale for SIFT
+sift = cv2.SIFT_create()
+keypoints, descriptors = sift.detectAndCompute(gray, None)
+
+sift_img = cv2.drawKeypoints(img, keypoints, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+cv2.imwrite("Assignment_02/sift_output.png", sift_img)
+
+# HOG descriptor
+hog_features, hog_image = hog(gray, visualize=True, block_norm='L2-Hys')
+plt.imsave("Assignment_02/hog_output.png", hog_image, cmap="gray")
+
+# ------------------ Task 5: Morphological Operations ------------------
+# Binary mask from Canny for demo
+_, mask = cv2.threshold(canny, 127, 255, cv2.THRESH_BINARY)
+
+kernel = np.ones((5,5), np.uint8)
+erosion = cv2.erode(mask, kernel, iterations=1)
+dilation = cv2.dilate(mask, kernel, iterations=1)
+opening = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+closing = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+
+cv2.imwrite("Assignment_02/morph_erosion.png", erosion)
+cv2.imwrite("Assignment_02/morph_dilation.png", dilation)
+cv2.imwrite("Assignment_02/morph_opening.png", opening)
+cv2.imwrite("Assignment_02/morph_closing.png", closing)
+
+print("✅ Assignment 2 complete: Outputs saved in Assignment_02 folder")
