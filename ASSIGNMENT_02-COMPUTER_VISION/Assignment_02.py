@@ -3,13 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 from skimage.segmentation import watershed, felzenszwalb
 from skimage.color import rgb2gray
+from skimage.feature import hog
+from skimage import exposure
 import os
 
 # 1️⃣ Ensure output folder exists
 os.makedirs("Assignment_02", exist_ok=True)
 
 # 2️⃣ Load Image (replace filename with your actual image)
-img = cv2.imread('/workspaces/computer-vision-Assignments/Copilot_20260901_194737.png')   
+img = cv2.imread('/workspaces/computer-vision-Assignments/Copilot_20260901_194737.png')
 print("Image shape:", img.shape)
 
 # 3️⃣ Convert to Grayscale
@@ -50,4 +52,31 @@ plt.imshow(segments_fz, cmap='nipy_spectral')
 plt.axis('off')
 plt.savefig('Assignment_02/felzenszwalb_output.png', bbox_inches='tight')
 
-print("✅ All outputs saved in Assignment_02 folder: canny_output.png, harris_output.png, watershed_output.png, felzenszwalb_output.png")
+# 8️⃣ SIFT Feature Descriptors
+sift = cv2.SIFT_create()
+kp, des = sift.detectAndCompute(gray, None)
+img_sift = cv2.drawKeypoints(img, kp, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+cv2.imwrite('Assignment_02/sift_output.png', img_sift)
+
+# 9️⃣ HOG Feature Descriptors (using scikit-image)
+fd, hog_image = hog(gray, orientations=9, pixels_per_cell=(8, 8),
+                    cells_per_block=(2, 2), visualize=True)
+hog_image_rescaled = exposure.rescale_intensity(hog_image, in_range=(0, 10))
+plt.imshow(hog_image_rescaled, cmap='gray')
+plt.axis('off')
+plt.savefig('Assignment_02/hog_output.png', bbox_inches='tight')
+
+# 🔟 Morphological Operations
+morph_erosion = cv2.erode(thresh, kernel, iterations=1)
+cv2.imwrite('Assignment_02/morph_erosion.png', morph_erosion)
+
+morph_dilation = cv2.dilate(thresh, kernel, iterations=1)
+cv2.imwrite('Assignment_02/morph_dilation.png', morph_dilation)
+
+morph_opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+cv2.imwrite('Assignment_02/morph_opening.png', morph_opening)
+
+morph_closing = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+cv2.imwrite('Assignment_02/morph_closing.png', morph_closing)
+
+print("✅ All outputs saved in Assignment_02 folder: canny_output.png, harris_output.png, watershed_output.png, felzenszwalb_output.png, sift_output.png, hog_output.png, morph_erosion.png, morph_dilation.png, morph_opening.png, morph_closing.png")
