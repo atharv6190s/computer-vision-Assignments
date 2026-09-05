@@ -80,3 +80,4 @@ morph_closing = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
 cv2.imwrite('Assignment_02/morph_closing.png', morph_closing)
 
 print("✅ All outputs saved in Assignment_02 folder: canny_output.png, harris_output.png, watershed_output.png, felzenszwalb_output.png, sift_output.png, hog_output.png, morph_erosion.png, morph_dilation.png, morph_opening.png, morph_closing.png")
+
